@@ -4,6 +4,8 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+private let useCustomTelegramServer: Bool = true
+
 
 public enum AuthorizationCodeRequestError {
     case invalidPhoneNumber
@@ -142,6 +144,10 @@ func sendFirebaseAuthorizationCode(network: Network, phoneNumber: String, apiId:
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>, syncContacts: Bool, disableAuthTokens: Bool = false, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
+    if useCustomTelegramServer {
+        return .fail(.generic(info: (501, "CUSTOM_SERVER_AUTH_DISABLED")))
+    }
+
     var cloudValue: [Data] = []
     if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
         cloudValue = list.compactMap { string -> Data? in
@@ -1015,6 +1021,10 @@ public func resetLoginEmail(account: UnauthorizedAccount, phoneNumber: String, p
 }
 
 public func authorizeWithCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, code: AuthorizationCode, termsOfService: UnauthorizedAccountTermsOfService?, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> {
+    if useCustomTelegramServer {
+        return .fail(.generic)
+    }
+
     return account.postbox.transaction { transaction -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
@@ -1215,6 +1225,10 @@ public final class AuthorizeWithPasskeyResult {
 }
 
 public func authorizeWithPasskey(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, passkey: AuthorizationPasskeyData, foreignDatacenter: (id: Int, authKeyId: Int64)?, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?, syncContacts: Bool) -> Signal<AuthorizeWithPasskeyResult, AuthorizationCodeVerificationError> {
+    if useCustomTelegramServer {
+        return .fail(.generic)
+    }
+
     let userHandle = passkey.userHandle.components(separatedBy: ":")
     var targetDatacenterId: Int?
     if foreignDatacenter == nil && userHandle.count >= 2 {
@@ -1622,4 +1636,3 @@ func _internal_reportMissingCode(network: Network, phoneNumber: String, phoneCod
         return .complete()
     }
 }
-

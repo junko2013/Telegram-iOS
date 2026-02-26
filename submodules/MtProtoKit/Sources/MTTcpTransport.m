@@ -24,6 +24,10 @@
 
 static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
+static bool MTUseCustomTelegramServer(void) {
+    return true;
+}
+
 @interface MTTcpTransportContext : NSObject
 
 @property (nonatomic, strong) NSArray<MTTransportScheme *> * _Nonnull schemes;
@@ -675,11 +679,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                             if (transportContext.connection != nil && acceptTransaction)
                             {
                                 id transactionId = transportContext.connection.internalId;
+                                const bool requestQuickAck = MTUseCustomTelegramServer() ? false : transaction.needsQuickAck;
                                 [transportContext.connection sendDatas:@[transaction.payload] completion:^(bool success)
                                 {
                                     if (transaction.completion)
                                         transaction.completion(success, transactionId);
-                                } requestQuickAck:transaction.needsQuickAck expectDataInResponse:transaction.expectsDataInResponse];
+                                } requestQuickAck:requestQuickAck expectDataInResponse:transaction.expectsDataInResponse];
                             }
                             else if (transaction.completion != nil)
                                 transaction.completion(false, nil);

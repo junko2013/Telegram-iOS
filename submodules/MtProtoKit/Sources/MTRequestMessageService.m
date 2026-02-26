@@ -25,6 +25,10 @@
 #import <MtProtoKit/MTRpcError.h>
 #import "MTDropRpcResultMessage.h"
 
+static bool MTUseCustomTelegramServer(void) {
+    return true;
+}
+
 @interface MTRequestVerificationData : NSObject
 
 @property (nonatomic, strong, readonly) NSString *nonce;
@@ -423,6 +427,7 @@
 - (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi requestVerificationData:(MTRequestVerificationData *)requestVerificationData recaptchaVerificationData:(MTRequestRecaptchaVerificationData *)recaptchaVerificationData unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
 {
     NSData *currentData = request.payload;
+    const bool useCustomTelegramServer = MTUseCustomTelegramServer();
     
     NSString *debugDescription = @"";
     
@@ -470,7 +475,7 @@
         currentData = buffer.data;
     }
     
-    if ((_apiEnvironment != nil && _apiEnvironment.disableUpdates) || _forceBackgroundRequests)
+    if (!useCustomTelegramServer && ((_apiEnvironment != nil && _apiEnvironment.disableUpdates) || _forceBackgroundRequests))
     {
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
@@ -482,7 +487,7 @@
         debugDescription = [debugDescription stringByAppendingString:@", disableUpdates"];
     }
     
-    if (request.shouldDependOnRequest != nil)
+    if (!useCustomTelegramServer && request.shouldDependOnRequest != nil)
     {
         NSUInteger index = [_requests indexOfObject:request];
         if (index != NSNotFound)
@@ -639,7 +644,7 @@
             outgoingMessage.hasHighPriority = request.hasHighPriority;
             
             id unresolvedDependencyOnRequestInternalId = autoreleasingUnresolvedDependencyOnRequestInternalId;
-            if (unresolvedDependencyOnRequestInternalId != nil)
+            if (!MTUseCustomTelegramServer() && unresolvedDependencyOnRequestInternalId != nil)
             {
                 outgoingMessage.dynamicDecorator = ^id (int64_t currentMessageId, NSData *currentData, NSDictionary *messageInternalIdToPreparedMessage)
                 {

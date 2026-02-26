@@ -606,83 +606,20 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         _datacenterSeedAddressSetById[@(datacenterId)] = seedAddressSet;
+        if (seedAddressSet != nil && datacenterId != 0) {
+            _datacenterAddressSetById[@(datacenterId)] = seedAddressSet;
+            [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
+        }
     }];
 }
 
 - (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet forceUpdateSchemes:(bool)forceUpdateSchemes
 {
+    (void)forceUpdateSchemes;
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        if (addressSet != nil && datacenterId != 0)
-        {
-            if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%" PRIxPTR ": address set updated for %d]", (intptr_t)self, datacenterId);
-            }
-            
-            bool updateSchemes = forceUpdateSchemes;
-            
-            bool previousAddressSetWasEmpty = ((MTDatacenterAddressSet *)_datacenterAddressSetById[@(datacenterId)]).addressList.count == 0;
-            
-            _datacenterAddressSetById[@(datacenterId)] = addressSet;
-            [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
-            
-            NSArray<MTWeakContextChangeListener *> *changeListeners = [[NSArray alloc] initWithArray:_changeListeners];
-            
-            for (MTWeakContextChangeListener *listenerWrapper in changeListeners) {
-                id<MTContextChangeListener> listener = listenerWrapper.target;
-                if (listener) {
-                    if ([listener respondsToSelector:@selector(contextDatacenterAddressSetUpdated:datacenterId:addressSet:)]) {
-                        [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
-                    }
-                }
-            }
-            
-            if (true) {
-                bool shouldReset = previousAddressSetWasEmpty || updateSchemes;
-                for (MTWeakContextChangeListener *listenerWrapper in changeListeners) {
-                    id<MTContextChangeListener> listener = listenerWrapper.target;
-                    if (listener) {
-                        if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:shouldReset:)]) {
-                            [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:shouldReset];
-                        }
-                    }
-                }
-            } else {
-                /*for (NSNumber *nMedia in @[@false, @true]) {
-                    for (NSNumber *nIsProxy in @[@false, @true]) {
-                        MTDatacenterAddress *address = [self transportSchemeForDatacenterWithId:datacenterId media:[nMedia boolValue] isProxy:[nIsProxy boolValue]].address;
-                        bool matches = false;
-                        if (address != nil) {
-                            for (MTDatacenterAddress *listAddress in addressSet.addressList) {
-                                if ([listAddress.ip isEqualToString:address.ip]) {
-                                    if (listAddress.secret != nil && address.secret != nil && [listAddress.secret isEqualToData:address.secret]) {
-                                        matches = true;
-                                    } else if (listAddress.secret == nil && address.secret == nil) {
-                                        matches = true;
-                                    }
-                                }
-                            }
-                        }
-                        if (!matches) {
-                            if (MTLogEnabled()) {
-                                MTLog(@"[MTContext#%x: updated address set for %d doesn't contain current %@, updating]", (int)self, datacenterId, address);
-                            }
-                            
-                            [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:[self defaultTransportSchemeForDatacenterWithId:datacenterId media:[nMedia boolValue] isProxy:[nIsProxy boolValue]] media:[nMedia boolValue] isProxy:[nIsProxy boolValue]];
-                        }
-                    }
-                }*/
-            }
-            
-            if (updateSchemes) {
-                id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
-                if (disposable != nil) {
-                    [disposable dispose];
-                    [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
-                    
-                    [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:nil beginWithHttp:false media:false isProxy:_apiEnvironment.socksProxySettings != nil];
-                }
-            }
+        if (addressSet != nil && datacenterId != 0 && MTLogEnabled()) {
+            MTLog(@"[MTContext#%" PRIxPTR ": ignore dynamic address set update for %d in self-hosted mode]", (intptr_t)self, datacenterId);
         }
     }];
 }
@@ -694,42 +631,8 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        bool updated = false;
-        
-        MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
-        if (addressSet == nil)
-        {
-            addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:@[address]];
-            updated = true;
-        }
-        else if (![addressSet.addressList containsObject:address])
-        {
-            NSMutableArray *updatedAddressList = [[NSMutableArray alloc] init];
-            [updatedAddressList addObject:address];
-            [updatedAddressList addObjectsFromArray:addressSet.addressList];
-            
-            addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:updatedAddressList];
-            updated = true;
-        }
-        
-        if (updated)
-        {
-            if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%" PRIxPTR ": added address %@ for datacenter %d]", (intptr_t)self, address, datacenterId);
-            }
-            
-            _datacenterAddressSetById[@(datacenterId)] = addressSet;
-            [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
-            
-            NSArray *changeListeners = [[NSArray alloc] initWithArray:_changeListeners];
-            for (MTWeakContextChangeListener *value in changeListeners) {
-                id<MTContextChangeListener> listener = value.target;
-                if (listener) {
-                    if ([listener respondsToSelector:@selector(contextDatacenterAddressSetUpdated:datacenterId:addressSet:)]) {
-                        [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
-                    }
-                }
-            }
+        if (MTLogEnabled()) {
+            MTLog(@"[MTContext#%" PRIxPTR ": ignore dynamic address append for %d in self-hosted mode]", (intptr_t)self, datacenterId);
         }
     }];
 }

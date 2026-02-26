@@ -4,6 +4,8 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+private let useCustomTelegramServer: Bool = true
+
 private enum AccountStateManagerOperationContent {
     case pollDifference(Int32, AccountFinalStateEvents)
     case collectUpdateGroups([UpdateGroup], Double)
@@ -837,6 +839,10 @@ public final class AccountStateManager {
                 }
                 |> deliverOn(self.queue)
                 |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
+                    if useCustomTelegramServer {
+                        return .single((nil, nil, false, false))
+                    }
+
                     if let state = state, let authorizedState = state.state {
                         var flags: Int32 = 0
                         var ptsTotalLimit: Int32?
@@ -919,6 +925,10 @@ public final class AccountStateManager {
                             }
                         }
                     } else {
+                        if useCustomTelegramServer {
+                            return .single((nil, nil, false, false))
+                        }
+
                         let appliedState = network.request(Api.functions.updates.getState())
                         |> retryRequest
                         |> mapToSignal { state in
@@ -1429,6 +1439,10 @@ public final class AccountStateManager {
             }
             |> take(1)
             |> mapToSignal { [weak self] state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                if useCustomTelegramServer {
+                    return .single((nil, nil, false))
+                }
+
                 if let authorizedState = state.state {
                     let flags: Int32 = 0
                     let ptsTotalLimit: Int32? = nil

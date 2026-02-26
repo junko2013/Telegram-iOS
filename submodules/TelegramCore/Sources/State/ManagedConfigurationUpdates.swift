@@ -15,27 +15,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
                 case let .config(configData):
-                    let (flags, dcOptions, chatSizeMax, megagroupSizeMax, forwardedCountMax, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, stickersRecentLimit, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, reactionsDefault, autologinToken) = (configData.flags, configData.dcOptions, configData.chatSizeMax, configData.megagroupSizeMax, configData.forwardedCountMax, configData.editTimeLimit, configData.revokeTimeLimit, configData.revokePmTimeLimit, configData.stickersRecentLimit, configData.autoupdateUrlPrefix, configData.gifSearchUsername, configData.venueSearchUsername, configData.imgSearchUsername, configData.webfileDcId, configData.suggestedLangCode, configData.langPackVersion, configData.baseLangPackVersion, configData.reactionsDefault, configData.autologinToken)
-                    var addressList: [Int: [MTDatacenterAddress]] = [:]
-                    for option in dcOptions {
-                        switch option {
-                            case let .dcOption(dcOptionData):
-                                let (flags, id, ipAddress, port, secret) = (dcOptionData.flags, dcOptionData.id, dcOptionData.ipAddress, dcOptionData.port, dcOptionData.secret)
-                                let preferForMedia = (flags & (1 << 1)) != 0
-                                if addressList[Int(id)] == nil {
-                                    addressList[Int(id)] = []
-                                }
-                                let restrictToTcp = (flags & (1 << 2)) != 0
-                                let isCdn = (flags & (1 << 3)) != 0
-                                let preferForProxy = (flags & (1 << 4)) != 0
-                                addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn, preferForProxy: preferForProxy, secret: secret?.makeData()))
-                        }
-                    }
-                    network.context.performBatchUpdates {
-                        for (id, list) in addressList {
-                            network.context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: list), forceUpdateSchemes: false)
-                        }
-                    }
+                    let (flags, chatSizeMax, megagroupSizeMax, forwardedCountMax, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, stickersRecentLimit, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, reactionsDefault, autologinToken) = (configData.flags, configData.chatSizeMax, configData.megagroupSizeMax, configData.forwardedCountMax, configData.editTimeLimit, configData.revokeTimeLimit, configData.revokePmTimeLimit, configData.stickersRecentLimit, configData.autoupdateUrlPrefix, configData.gifSearchUsername, configData.venueSearchUsername, configData.imgSearchUsername, configData.webfileDcId, configData.suggestedLangCode, configData.langPackVersion, configData.baseLangPackVersion, configData.reactionsDefault, configData.autologinToken)
                     
                     let blockedMode = (flags & (1 << 8)) != 0
                     

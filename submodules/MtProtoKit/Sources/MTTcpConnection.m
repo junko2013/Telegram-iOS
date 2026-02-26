@@ -28,6 +28,10 @@
 
 #import <libkern/OSAtomic.h>
 
+static bool MTUseCustomTelegramServer(void) {
+    return true;
+}
+
 static id<MTBignum> get_y2(id<MTBignum> x, id<MTBignum> mod, id<MTBignumContext> context) {
     // returns y^2 = x^3 + 486662 * x^2 + x
     id<MTBignum> y = [context clone:x];
@@ -849,6 +853,14 @@ struct ctr_state {
             if ([_mtpSecret isKindOfClass:[MTProxySecretType1 class]] || [_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {
                 _useIntermediateFormat = true;
             }
+        }
+
+        if (MTUseCustomTelegramServer()) {
+            // Keep client transport in the simplest old abridged mode for local skeleton interop.
+            _mtpSecret = nil;
+            _mtpIp = nil;
+            _mtpPort = 0;
+            _useIntermediateFormat = false;
         }
         
         _resolveDisposable = [[MTMetaDisposable alloc] init];
